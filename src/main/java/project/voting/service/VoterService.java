@@ -35,6 +35,7 @@ public class VoterService {
 
     @Transactional
     public void castVote(int voterId, int candidateId) {
+        // 1. Retrieve the voter and ensure they haven't voted yet
         Voter voter = voterRepository.findById(voterId)
                 .orElseThrow(() -> new RuntimeException("Voter not found"));
 
@@ -42,12 +43,17 @@ public class VoterService {
             throw new RuntimeException("Error: You have already cast your ballot!");
         }
 
+        // 2. Retrieve the candidate
         Candidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found"));
 
+        // 3. CORRECT INCREMENT LOGIC: Get current value and add 1
         candidate.setVoteCount(candidate.getVoteCount() + 1);
+
+        // 4. Update the voter status
         voter.setHasVoted(true);
 
+        // 5. Save changes to DB
         candidateRepository.save(candidate);
         voterRepository.save(voter);
     }
