@@ -17,9 +17,16 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        // FIX: Match your React port (3000)
-        config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-        config.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization"));
+
+        // ADDED: Your live Render frontend URL
+        config.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "https://university-e-voting-fronted.onrender.com"
+        ));
+
+        // Use "*" for headers to avoid "Missing Header" errors during login
+        config.setAllowedHeaders(Arrays.asList("*"));
+
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         source.registerCorsConfiguration("/**", config);
