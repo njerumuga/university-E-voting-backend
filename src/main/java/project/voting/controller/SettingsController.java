@@ -7,6 +7,7 @@ import project.voting.entity.ElectionSettings;
 import project.voting.repository.ElectionSettingsRepository;
 
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/voters/settings")
@@ -17,17 +18,30 @@ public class SettingsController {
     private ElectionSettingsRepository repository;
 
     @GetMapping("/phase")
-    public ResponseEntity<String> getPhase() {
-        return ResponseEntity.ok(repository.findById(1)
+    public ResponseEntity<Map<String, String>> getPhase() {
+        String phase = repository.findById(1)
                 .map(ElectionSettings::getCurrentPhase)
-                .orElse("registration"));
+                .orElse("registration");
+
+        // Wrapping in a Map ensures it returns JSON: {"phase": "registration"}
+        Map<String, String> response = new HashMap<>();
+        response.setData("phase", phase);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/phase")
-    public ResponseEntity<String> updatePhase(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, String>> updatePhase(@RequestBody Map<String, String> payload) {
+        String newPhase = payload.get("phase");
+
+        // Find existing or create new with ID 1
         ElectionSettings settings = repository.findById(1).orElse(new ElectionSettings());
-        settings.setCurrentPhase(payload.get("phase"));
+        settings.setId(1); // Force ID 1 to ensure it updates the same row
+        settings.setCurrentPhase(newPhase);
+
         repository.save(settings);
-        return ResponseEntity.ok(settings.getCurrentPhase());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("phase", settings.getCurrentPhase());
+        return ResponseEntity.ok(response);
     }
 }
