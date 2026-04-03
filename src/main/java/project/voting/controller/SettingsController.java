@@ -23,9 +23,9 @@ public class SettingsController {
                 .map(ElectionSettings::getCurrentPhase)
                 .orElse("registration");
 
-        // Wrapping in a Map ensures it returns JSON: {"phase": "registration"}
         Map<String, String> response = new HashMap<>();
-        response.setData("phase", phase);
+        // Use .put() NOT .setData()
+        response.put("phase", phase);
         return ResponseEntity.ok(response);
     }
 
@@ -33,9 +33,9 @@ public class SettingsController {
     public ResponseEntity<Map<String, String>> updatePhase(@RequestBody Map<String, String> payload) {
         String newPhase = payload.get("phase");
 
-        // Find existing or create new with ID 1
+        // Find existing settings or create a new one if it doesn't exist
         ElectionSettings settings = repository.findById(1).orElse(new ElectionSettings());
-        settings.setId(1); // Force ID 1 to ensure it updates the same row
+        settings.setId(1); // Force ID 1 so we always update the same row
         settings.setCurrentPhase(newPhase);
 
         repository.save(settings);
