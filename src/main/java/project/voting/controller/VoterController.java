@@ -23,46 +23,36 @@ public class VoterController {
     @Autowired private CandidateRepository candidateRepository;
     @Autowired private JwtTokenService jwtTokenService;
 
-    // Returns candidates based on the logged-in student's school
     @GetMapping("/candidates")
     public ResponseEntity<List<Candidate>> getMyCandidates(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
-        // GET ADMISSION NUMBER FROM TOKEN
         String admissionNumber = jwtTokenService.getAdmissionNumberFromToken(token);
-
-        // FETCH FULL OBJECT FROM DB TO GET THE SCHOOL
         Voter voter = voterService.findByAdmissionNumber(admissionNumber).orElse(null);
-
         if (voter == null) return ResponseEntity.status(401).build();
-
-        // Log for debugging
-        System.out.println("Fetching candidates for school: " + voter.getSchool());
 
         List<Candidate> filtered = candidateRepository.findAll().stream()
                 .filter(c -> c.getSchool() != null && c.getSchool().equalsIgnoreCase(voter.getSchool()))
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(filtered);
     }
 
-    // Identifies the logged-in student (FIXES "NOT ASSIGNED" ERROR)
     @GetMapping("/me")
     public ResponseEntity<?> getMe(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
         String token = authHeader.substring(7);
-
-        // RE-FETCH FROM DB TO ENSURE SCHOOL IS INCLUDED
         String admissionNumber = jwtTokenService.getAdmissionNumberFromToken(token);
         Optional<Voter> voter = voterService.findByAdmissionNumber(admissionNumber);
-
-        return voter.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(401).body(null));
+        return voter.map(ResponseEntity::ok).orElse(ResponseEntity.status(401).body(null));
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerVoter(@RequestBody Voter voter) {
+        // Safety check to prevent Validation Errors in logs
+        if (voter.getName() == null || voter.getAdmissionNumber() == null) {
+            return ResponseEntity.badRequest().body("Full Name and Admission Number are required.");
+        }
         if (voterService.findByAdmissionNumber(voter.getAdmissionNumber()).isPresent()) {
             return ResponseEntity.status(409).body("Admission Number already registered.");
         }
@@ -86,7 +76,6 @@ public class VoterController {
         String token = authHeader.substring(7);
         String admissionNumber = jwtTokenService.getAdmissionNumberFromToken(token);
         Voter voter = voterService.findByAdmissionNumber(admissionNumber).orElse(null);
-
         if (voter == null) return ResponseEntity.status(401).body("User not found");
 
         try {
@@ -95,6 +84,16 @@ public class VoterController {
             return ResponseEntity.ok("Vote cast successfully!");
         } catch (Exception e) {
             return ResponseEntity.status(400).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/admin/reset-election")
+    public ResponseEntity<?> resetElection(@RequestHeader("Authorization") String authHeader) {
+        try {
+            voterService.resetAllVotes();
+            return ResponseEntity.ok("Election has been fully reset.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Reset failed: " + e.getMessage());
         }
     }
 }

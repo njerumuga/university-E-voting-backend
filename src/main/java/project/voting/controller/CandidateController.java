@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/candidates")
+@RequestMapping("/api/candidates")
+@CrossOrigin(origins = "*")
 public class CandidateController {
 
     @Autowired
@@ -20,41 +21,45 @@ public class CandidateController {
     @Autowired
     private JwtTokenService jwtTokenService;
 
-    // Get all candidates
+    // ✅ PUBLIC: No token required
     @GetMapping
-    public ResponseEntity<List<Candidate>> getAllCandidates(
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.replace("Bearer ", "");
-        if (!jwtTokenService.validateToken(token)) {
-            return ResponseEntity.status(401).body(null); // Unauthorized
-        }
-
+    public ResponseEntity<List<Candidate>> getAllCandidates() {
         return ResponseEntity.ok(candidateService.getAllCandidates());
     }
 
-    // Vote for a candidate
+    // 🔒 PROTECTED: Voting requires login
     @PostMapping("/{id}/vote")
     public ResponseEntity<?> voteForCandidate(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Integer id) {
-        String token = authHeader.replace("Bearer ", "");
-        if (!jwtTokenService.validateToken(token)) {
-            return ResponseEntity.status(401).body("Invalid or expired token."); // Unauthorized
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body("Missing or invalid token");
         }
 
-        // Extract voter information from token
+        String token = authHeader.substring(7);
+
+        if (!jwtTokenService.validateToken(token)) {
+            return ResponseEntity.status(401).body("Invalid token");
+        }
+
         Voter voter = jwtTokenService.getVoterFromToken(token);
+
         if (voter == null) {
-            return ResponseEntity.status(403).body("Unable to extract voter details."); // Forbidden
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        // 🚫 Prevent double voting
+        if (voter.isHasVoted()) {
+            return ResponseEntity.status(400).body("You have already voted");
         }
 
         try {
             Candidate updatedCandidate = candidateService.voteForCandidate(id);
+            voter.setHasVoted(true);
             return ResponseEntity.ok(updatedCandidate);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(400).body(e.getMessage()); // Bad Request
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("An error occurred while voting."); // Internal Server Error
+            return ResponseEntity.status(400).body(e.getMessage());
         }
     }
 }

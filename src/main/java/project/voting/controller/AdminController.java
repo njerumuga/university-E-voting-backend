@@ -21,15 +21,21 @@ public class AdminController {
     @Autowired
     private JwtTokenService jwtTokenService;
 
+    // ✅ ADMIN CHECK
     private boolean isAdmin(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return false;
+
         String token = authHeader.substring(7);
+
         if (!jwtTokenService.validateToken(token)) return false;
+
         Voter voter = jwtTokenService.getVoterFromToken(token);
+
         return voter != null && voter.isAdmin();
     }
 
-    // --- EXISTING VOTER MANAGEMENT ---
+    // ================= VOTERS =================
+
     @GetMapping("/voters")
     public ResponseEntity<List<Voter>> getAllVoters(@RequestHeader("Authorization") String authHeader) {
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
@@ -37,35 +43,52 @@ public class AdminController {
     }
 
     @PutMapping("/voters/{id}")
-    public ResponseEntity<Voter> updateVoter(@RequestHeader("Authorization") String authHeader, @PathVariable Integer id, @RequestBody Voter updatedVoter) {
+    public ResponseEntity<Voter> updateVoter(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id,
+            @RequestBody Voter updatedVoter) {
+
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(adminService.updateVoter(id, updatedVoter));
     }
 
     @DeleteMapping("/voters/{id}")
-    public ResponseEntity<String> deleteVoter(@RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    public ResponseEntity<String> deleteVoter(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
         adminService.deleteVoter(id);
         return ResponseEntity.ok("Voter deleted successfully");
     }
 
-    // --- UPDATED CANDIDATE MANAGEMENT ---
+    // ================= CANDIDATES =================
+
     @PostMapping("/candidates")
-    public ResponseEntity<Candidate> addCandidate(@RequestHeader("Authorization") String authHeader, @RequestBody Candidate candidate) {
+    public ResponseEntity<Candidate> addCandidate(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Candidate candidate) {
+
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(adminService.addCandidate(candidate));
     }
 
     @DeleteMapping("/candidates/{id}")
-    public ResponseEntity<String> deleteCandidate(@RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    public ResponseEntity<String> deleteCandidate(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
         adminService.deleteCandidate(id);
         return ResponseEntity.ok("Candidate deleted successfully");
     }
 
-    // --- EXISTING RESULTS MANAGEMENT ---
+    // ================= RESULTS =================
+
     @GetMapping("/results")
-    public ResponseEntity<List<Candidate>> getResults(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<List<Candidate>> getResults(
+            @RequestHeader("Authorization") String authHeader) {
+
         if (!isAdmin(authHeader)) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(adminService.getResults());
     }
